@@ -1,0 +1,9 @@
+HDMI=HDMI 1
+HDMI2=HDMI 2
+RGB=Computer 1
+RGB2=Computer 2
+VID=Video
+SVID=S-Video
+NETWORK=Network
+USBDISPLAY=USB Display
+NULL=-
