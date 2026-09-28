@@ -553,72 +553,7 @@ p.close()
 
 ## openHAB Integration
 
-Requires the **MQTT Binding**. Replace `192.168.0.10` with the IP address of the machine running Mosquitto.
-
-`things/benq.things`:
-
-```java
-Bridge mqtt:broker:beamerpi "Mosquitto Beamer-Pi" [ host="192.168.0.10", port=1883, secure=false,
-                                                   username="mqtt", password="mqtt", clientID="openhab-benq" ] {
-    Thing topic mh856ust "BenQ MH856UST" [ availabilityTopic="projector/benq/mh856ust/availability",
-                                          payloadAvailable="online", payloadNotAvailable="offline" ] {
-    Channels:
-        Type switch : power       "Power"        [ stateTopic="projector/benq/mh856ust/power/state",       commandTopic="projector/benq/mh856ust/power/command" ]
-        Type string : source      "Source"       [ stateTopic="projector/benq/mh856ust/source/state",      commandTopic="projector/benq/mh856ust/source/command" ]
-        Type switch : mute        "Mute"         [ stateTopic="projector/benq/mh856ust/mute/state",        commandTopic="projector/benq/mh856ust/mute/command" ]
-        Type number : volume      "Volume"       [ stateTopic="projector/benq/mh856ust/volume/state",      commandTopic="projector/benq/mh856ust/volume/command" ]
-        Type switch : blank       "Blank"        [ stateTopic="projector/benq/mh856ust/blank/state",       commandTopic="projector/benq/mh856ust/blank/command" ]
-        Type switch : freeze      "Freeze"       [ stateTopic="projector/benq/mh856ust/freeze/state",      commandTopic="projector/benq/mh856ust/freeze/command" ]
-        Type string : picturemode "Picture Mode" [ stateTopic="projector/benq/mh856ust/picturemode/state", commandTopic="projector/benq/mh856ust/picturemode/command" ]
-        Type string : lampmode    "Lamp Mode"    [ stateTopic="projector/benq/mh856ust/lampmode/state",    commandTopic="projector/benq/mh856ust/lampmode/command" ]
-        Type number : lamphours   "Lamp Hours"   [ stateTopic="projector/benq/mh856ust/lamphours/state" ]
-        Type string : phase       "Phase"        [ stateTopic="projector/benq/mh856ust/phase/state" ]
-        Type string : connection  "Connection"   [ stateTopic="projector/benq/mh856ust/connection/state" ]
-        Type string : menu        "Menu"         [ commandTopic="projector/benq/mh856ust/menu/command" ]
-        Type string : raw         "Raw Command"  [ commandTopic="projector/benq/mh856ust/raw/command" ]
-        Type string : rawResponse "Raw Response" [ stateTopic="projector/benq/mh856ust/raw/response" ]
-        Type string : error       "Last Error"   [ stateTopic="projector/benq/mh856ust/error" ]
-    }
-}
-```
-
-`items/benq.items`:
-
-```java
-Group   gBeamer            "Beamer"
-Switch  Beamer_Power       "Power"              (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:power" }
-String  Beamer_Source      "Source [%s]"        (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:source" }
-Switch  Beamer_Mute        "Mute"               (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:mute" }
-Number  Beamer_Volume      "Volume [%d]"        (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:volume" }
-Switch  Beamer_Blank       "Blank"              (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:blank" }
-Switch  Beamer_Freeze      "Freeze"             (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:freeze" }
-String  Beamer_PictureMode "Picture Mode [%s]"  (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:picturemode" }
-String  Beamer_LampMode    "Lamp Mode [%s]"     (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:lampmode" }
-Number  Beamer_LampHours   "Lamp Hours [%d h]"  (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:lamphours" }
-String  Beamer_Phase       "Phase [%s]"         (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:phase" }
-String  Beamer_Connection  "Connection [%s]"    (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:connection" }
-String  Beamer_Menu        "Menu"               (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:menu" }
-String  Beamer_Raw         "Raw Command"        (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:raw" }
-String  Beamer_RawResponse "Raw Response [%s]"  (gBeamer) { channel="mqtt:topic:beamerpi:mh856ust:rawResponse" }
-```
-
-Sitemap example:
-
-```java
-Frame label="Beamer" {
-    Switch    item=Beamer_Power
-    Text      item=Beamer_Phase
-    Selection item=Beamer_Source      mappings=[HDMI="HDMI 1", HDMI2="HDMI 2", RGB="Computer 1", RGB2="Computer 2", VID="Video"]
-    Switch    item=Beamer_Mute
-    Setpoint  item=Beamer_Volume      minValue=0 maxValue=20 step=1
-    Switch    item=Beamer_Blank
-    Selection item=Beamer_PictureMode mappings=[PRESET="Presentation", BRIGHT="Bright", SRGB="sRGB", CINE="Cinema", USER1="User 1"]
-    Switch    item=Beamer_Menu        mappings=[ON="Menu", UP="▲", DOWN="▼", LEFT="◀", RIGHT="▶", ENTER="OK", OFF="Close"]
-    Text      item=Beamer_LampHours
-}
-```
-
-The `Beamer_Volume` setpoint sends a target value; the program steps the volume up or down until it is reached.
+A complete example for openHAB 5 (MQTT Binding with TLS, Things, Items, Sitemap, MAP transformations and Python Scripting rules) is in the [`openhab/`](openhab/) directory. See [`openhab/README.md`](openhab/README.md).
 
 ## Projector Command Reference
 
