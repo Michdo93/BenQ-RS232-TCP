@@ -1,0 +1,32 @@
+sitemap benq label="BenQ Projector" {
+    Frame label="Control" {
+        Switch    item=Beamer_Presentation
+        Switch    item=Beamer_Power
+        Text      item=Beamer_Phase       visibility=[Beamer_Phase!="STABLE"]
+        Selection item=Beamer_Source
+        Switch    item=Beamer_Blank
+        Switch    item=Beamer_Freeze
+        Switch    item=Beamer_Mute
+        Setpoint  item=Beamer_Volume      minValue=0 maxValue=20 step=1
+    }
+    Frame label="Picture" {
+        Selection item=Beamer_PictureMode
+        Selection item=Beamer_Aspect
+        Selection item=Beamer_ColorTemp
+        Setpoint  item=Beamer_Brightness  minValue=0 maxValue=100 step=1
+        Setpoint  item=Beamer_Contrast    minValue=0 maxValue=100 step=1
+        Selection item=Beamer_LampMode
+    }
+    Frame label="Menu" {
+        Switch    item=Beamer_Menu        mappings=[ON="Menu", UP="▲", DOWN="▼", LEFT="◀", RIGHT="▶", ENTER="OK", OFF="✕"]
+    }
+    Frame label="Status" {
+        Text      item=Beamer_Model
+        Text      item=Beamer_LampHours
+        Text      item=Beamer_LampWarning valuecolor=[ON="red", OFF="green"]
+        Text      item=Beamer_Connection  valuecolor=[ONLINE="green", OFFLINE="red"]
+        Text      item=Beamer_Error
+        Text      item=Beamer_ErrorCommand
+        Switch    item=Beamer_Refresh     mappings=[1="Refresh"]
+    }
+}
