@@ -1,0 +1,51 @@
+// BenQ MH856UST via benq_projector.py (MQTT) - requires the MQTT Binding
+// Broker on the projector Pi, TLS on port 8883 (see etc/mosquitto/mosquitto.conf)
+//
+// host:              must match a name/IP in the server certificate (scripts/create-certs.sh)
+// certificatepin:    the broker certificate is pinned on the first successful connection;
+//                    to accept a new certificate later, clear "certificate" in the Thing
+// hostnameValidated: set to false only if you use a certificate without matching names
+
+Bridge mqtt:broker:beamerpi "MQTT Broker BeamerPi (TLS)" [
+    host="shlBeamerPi.local",
+    port=8883,
+    secure=true,
+    certificatepin=true,
+    publickeypin=false,
+    hostnameValidated=true,
+    username="projector",
+    password="changeme",
+    clientID="openhab-benq",
+    keepAlive=60,
+    reconnectTime=60000
+] {
+    Thing topic mh856ust "BenQ MH856UST" [
+        availabilityTopic="projector/benq/mh856ust/availability",
+        payloadAvailable="online",
+        payloadNotAvailable="offline"
+    ] {
+    Channels:
+        Type switch : power        "Power"             [ stateTopic="projector/benq/mh856ust/power/state",       commandTopic="projector/benq/mh856ust/power/command" ]
+        Type string : source       "Source"            [ stateTopic="projector/benq/mh856ust/source/state",      commandTopic="projector/benq/mh856ust/source/command" ]
+        Type switch : mute         "Mute"              [ stateTopic="projector/benq/mh856ust/mute/state",        commandTopic="projector/benq/mh856ust/mute/command" ]
+        Type number : volume       "Volume"            [ stateTopic="projector/benq/mh856ust/volume/state",      commandTopic="projector/benq/mh856ust/volume/command", min=0, max=20, step=1 ]
+        Type switch : blank        "Blank"             [ stateTopic="projector/benq/mh856ust/blank/state",       commandTopic="projector/benq/mh856ust/blank/command" ]
+        Type switch : freeze       "Freeze"            [ stateTopic="projector/benq/mh856ust/freeze/state",      commandTopic="projector/benq/mh856ust/freeze/command" ]
+        Type string : picturemode  "Picture Mode"      [ stateTopic="projector/benq/mh856ust/picturemode/state", commandTopic="projector/benq/mh856ust/picturemode/command" ]
+        Type string : lampmode     "Lamp Mode"         [ stateTopic="projector/benq/mh856ust/lampmode/state",    commandTopic="projector/benq/mh856ust/lampmode/command" ]
+        Type string : aspect       "Aspect Ratio"      [ stateTopic="projector/benq/mh856ust/aspect/state",      commandTopic="projector/benq/mh856ust/aspect/command" ]
+        Type string : colortemp    "Color Temperature" [ stateTopic="projector/benq/mh856ust/colortemp/state",   commandTopic="projector/benq/mh856ust/colortemp/command" ]
+        Type number : brightness   "Brightness"        [ stateTopic="projector/benq/mh856ust/brightness/state",  commandTopic="projector/benq/mh856ust/brightness/command" ]
+        Type number : contrast     "Contrast"          [ stateTopic="projector/benq/mh856ust/contrast/state",    commandTopic="projector/benq/mh856ust/contrast/command" ]
+        Type number : lamphours    "Lamp Hours"        [ stateTopic="projector/benq/mh856ust/lamphours/state" ]
+        Type string : model        "Model"             [ stateTopic="projector/benq/mh856ust/model/state" ]
+        Type string : phase        "Phase"             [ stateTopic="projector/benq/mh856ust/phase/state" ]
+        Type string : connection   "Connection"        [ stateTopic="projector/benq/mh856ust/connection/state" ]
+        Type string : menu         "Menu"              [ commandTopic="projector/benq/mh856ust/menu/command" ]
+        Type string : refresh      "Refresh"           [ commandTopic="projector/benq/mh856ust/refresh/command" ]
+        Type string : raw          "Raw Command"       [ commandTopic="projector/benq/mh856ust/raw/command" ]
+        Type string : rawResponse  "Raw Response"      [ stateTopic="projector/benq/mh856ust/raw/response" ]
+        Type string : error        "Last Error"        [ stateTopic="projector/benq/mh856ust/error", transformationPattern="JSONPATH:$.message" ]
+        Type string : errorCommand "Last Error Command"[ stateTopic="projector/benq/mh856ust/error", transformationPattern="JSONPATH:$.command" ]
+    }
+}
