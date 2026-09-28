@@ -42,7 +42,9 @@ DEFAULT_CONFIG = {
         "host": "192.168.0.59",
         "port": "8000",
         "timeout": "3.0",           # seconds to wait for a reply
-        "power_timeout": "10.0",    # seconds to wait for a reply to pow=on / pow=off
+        "power_timeout": "5.0",     # seconds to wait for a reply to pow=on / pow=off
+        "power_retries": "3",       # attempts for pow=on / pow=off until the state is confirmed
+        "power_check_delay": "5",   # seconds between pow=on / pow=off and the verification
         "command_gap": "0.7",       # minimum pause between two commands
         "query_retries": "1",       # extra attempts for "=?" queries without reply
         "warmup_time": "60",        # seconds after power on in which commands are deferred
@@ -120,11 +122,14 @@ class BenQProjector:
     def __init__(self, host: str, port: int = 8000, timeout: float = 3.0,
                  command_gap: float = 0.7, query_retries: int = 1,
                  on_token: Optional[Callable[[bool, str], None]] = None,
-                 power_timeout: float = 10.0):
+                 power_timeout: float = 5.0, power_retries: int = 3,
+                 power_check_delay: float = 5.0):
         self.host = host
         self.port = port
         self.timeout = timeout
         self.power_timeout = power_timeout
+        self.power_retries = power_retries
+        self.power_check_delay = power_check_delay
         self.command_gap = command_gap
         self.query_retries = query_retries
         self.on_token = on_token
@@ -259,6 +264,50 @@ class BenQProjector:
 
     def set(self, key: str, value: str) -> Response:
         return self.execute("{}={}".format(key, value))
+
+    def power(self, on: bool) -> Response:
+        """Switch the projector on/off and verify the result, retrying if necessary.
+
+        Observed behaviour of the MH856UST:
+          * in standby the first command on a connection is often swallowed
+            -> a pow=? query is sent first as a wake-up
+          * pow=on/off is often not answered -> the state is checked afterwards
+          * while warming up the projector does not answer pow=? at all,
+            in standby it answers OFF -> NO_RESPONSE after pow=on means "warming up"
+        """
+        target = "ON" if on else "OFF"
+        cmd = "pow=on" if on else "pow=off"
+        with self._lock:
+            for attempt in range(1, self.power_retries + 1):
+                state = self.execute("pow=?")  # wake-up + current state
+                if state.status == Response.CONNECTION_ERROR:
+                    return state
+                if state.ok and state.value.upper() == target:
+                    return Response(Response.OK, cmd, value=target, raw=state.raw,
+                                    message="already {}".format(target) if attempt == 1
+                                    else "confirmed")
+                LOG.info("%s (attempt %d/%d)", cmd, attempt, self.power_retries)
+                resp = self.execute(cmd)
+                if resp.status == Response.CONNECTION_ERROR:
+                    return resp
+                if resp.ok and resp.value.upper() == target:
+                    return Response(Response.OK, cmd, value=target, raw=resp.raw,
+                                    message="confirmed by reply")
+                time.sleep(self.power_check_delay)
+                check = self.execute("pow=?")
+                if check.status == Response.CONNECTION_ERROR:
+                    return check
+                if check.ok and check.value.upper() == target:
+                    return Response(Response.OK, cmd, value=target, raw=check.raw,
+                                    message="confirmed by pow=?")
+                if on and check.status == Response.NO_RESPONSE:
+                    return Response(Response.OK, cmd, value=target,
+                                    message="warming up (no reply to pow=?)")
+                LOG.warning("Projector still %s after %s, retrying",
+                            check.value if check.ok else check.status, cmd)
+            return Response(Response.ERROR, cmd,
+                            message="power {} not confirmed after {} attempts".format(
+                                target, self.power_retries))
 
 
 # ------------------------------------------------------------------ properties
@@ -443,12 +492,7 @@ class ProjectorService:
     def _exec(self, cmd: str, report: bool = True) -> Response:
         resp = self.projector.execute(cmd)
         if resp.status == Response.CONNECTION_ERROR:
-            if self.state.get("connection") != "OFFLINE":
-                LOG.warning("Projector not reachable: %s", resp.message)
-            self._set_value("connection", "OFFLINE")
-            self.offline_until = time.monotonic() + self.reconnect_delay
-            if report:
-                self._publish_error(resp.as_dict())
+            self._exec_failed(resp, report)
             return resp
         self._set_value("connection", "ONLINE")
         if resp.ok:
@@ -462,15 +506,28 @@ class ProjectorService:
             LOG.debug("%s -> %s %s", cmd, resp.status, resp.message)
         return resp
 
+    def _exec_failed(self, resp: Response, report: bool = True) -> None:
+        if self.state.get("connection") != "OFFLINE":
+            LOG.warning("Projector not reachable: %s", resp.message)
+        self._set_value("connection", "OFFLINE")
+        self.offline_until = time.monotonic() + self.reconnect_delay
+        if report:
+            self._publish_error(resp.as_dict())
+
     def _power(self, target: str, cmd: str) -> None:
         """target: 'ON' or 'OFF'; handles the missing replies seen during standby."""
         old = self.state.get("power")
-        resp = self._exec(cmd)
-        if resp.status == Response.NO_RESPONSE:
-            LOG.info("No reply to %s, assuming power %s (verified by polling)", cmd, target)
-            self._set_value("power", target)
-        elif not resp.ok:
+        resp = self.projector.power(target == "ON")
+        if resp.status == Response.CONNECTION_ERROR:
+            self._exec_failed(resp)
             return
+        self._set_value("connection", "ONLINE")
+        if not resp.ok:
+            LOG.warning("%s -> %s", cmd, resp.message)
+            self._publish_error(resp.as_dict())
+            return
+        LOG.info("%s: %s", cmd, resp.message)
+        self._set_value("power", target)
         new = self.state.get("power")
         if new == "ON" and old != "ON":
             self._start_transition("warmup")
@@ -667,7 +724,8 @@ def make_projector(cfg: configparser.ConfigParser,
     pc = cfg["projector"]
     return BenQProjector(pc.get("host"), pc.getint("port"), pc.getfloat("timeout"),
                          pc.getfloat("command_gap"), pc.getint("query_retries"), on_token,
-                         pc.getfloat("power_timeout"))
+                         pc.getfloat("power_timeout"), pc.getint("power_retries"),
+                         pc.getfloat("power_check_delay"))
 
 
 def cmd_send(cfg: configparser.ConfigParser, commands: List[str], raw: bool) -> int:
@@ -679,16 +737,16 @@ def cmd_send(cfg: configparser.ConfigParser, commands: List[str], raw: bool) -> 
     rc = 0
     try:
         for command in commands:
-            resp = projector.execute(command)
+            lower = normalize_command(command).lower()
+            if lower in ("pow=on", "pow=off"):
+                resp = projector.power(lower == "pow=on")  # verified, with retries
+            else:
+                resp = projector.execute(command)
             if resp.ok:
                 if not raw:
                     print(resp.value)
-            elif (resp.status == Response.NO_RESPONSE
-                  and resp.command.lower() in ("pow=on", "pow=off")):
-                # normal for this projector: the command is executed without a reply
-                print("SENT")
-                print("{}: no reply (normal in standby/warm-up), check with pow=? "
-                      "in about 30-60 s".format(resp.command), file=sys.stderr)
+                if resp.message:
+                    print("{}: {}".format(resp.command, resp.message), file=sys.stderr)
             else:
                 print("{}: {} {}".format(resp.command, resp.status, resp.message).strip(),
                       file=sys.stderr)
