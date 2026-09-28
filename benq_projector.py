@@ -42,6 +42,7 @@ DEFAULT_CONFIG = {
         "host": "192.168.0.59",
         "port": "8000",
         "timeout": "3.0",           # seconds to wait for a reply
+        "power_timeout": "10.0",    # seconds to wait for a reply to pow=on / pow=off
         "command_gap": "0.7",       # minimum pause between two commands
         "query_retries": "1",       # extra attempts for "=?" queries without reply
         "warmup_time": "60",        # seconds after power on in which commands are deferred
@@ -118,10 +119,12 @@ class BenQProjector:
 
     def __init__(self, host: str, port: int = 8000, timeout: float = 3.0,
                  command_gap: float = 0.7, query_retries: int = 1,
-                 on_token: Optional[Callable[[bool, str], None]] = None):
+                 on_token: Optional[Callable[[bool, str], None]] = None,
+                 power_timeout: float = 10.0):
         self.host = host
         self.port = port
         self.timeout = timeout
+        self.power_timeout = power_timeout
         self.command_gap = command_gap
         self.query_retries = query_retries
         self.on_token = on_token
@@ -215,6 +218,8 @@ class BenQProjector:
 
     def _execute_once(self, cmd: str) -> Response:
         key = cmd.split("=", 1)[0].lower() if "=" in cmd else None
+        # the projector often answers power commands late or not at all
+        timeout = self.power_timeout if cmd.lower() in ("pow=on", "pow=off") else self.timeout
         try:
             if self._sock is None:
                 self.connect()
@@ -224,12 +229,12 @@ class BenQProjector:
                 time.sleep(wait)
             LOG.debug("-> *%s#", cmd)
             self._sock.sendall("\r*{}#\r".format(cmd).encode("ascii"))
-            deadline = time.monotonic() + self.timeout
+            deadline = time.monotonic() + timeout
             while True:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     return Response(Response.NO_RESPONSE, cmd,
-                                    message="no reply within {:.1f}s".format(self.timeout))
+                                    message="no reply within {:.1f}s".format(timeout))
                 if not self._read(min(remaining, 0.5)):
                     continue
                 for is_echo, token in self._tokens():
@@ -661,7 +666,8 @@ def make_projector(cfg: configparser.ConfigParser,
                    on_token: Optional[Callable[[bool, str], None]] = None) -> BenQProjector:
     pc = cfg["projector"]
     return BenQProjector(pc.get("host"), pc.getint("port"), pc.getfloat("timeout"),
-                         pc.getfloat("command_gap"), pc.getint("query_retries"), on_token)
+                         pc.getfloat("command_gap"), pc.getint("query_retries"), on_token,
+                         pc.getfloat("power_timeout"))
 
 
 def cmd_send(cfg: configparser.ConfigParser, commands: List[str], raw: bool) -> int:
@@ -677,6 +683,12 @@ def cmd_send(cfg: configparser.ConfigParser, commands: List[str], raw: bool) -> 
             if resp.ok:
                 if not raw:
                     print(resp.value)
+            elif (resp.status == Response.NO_RESPONSE
+                  and resp.command.lower() in ("pow=on", "pow=off")):
+                # normal for this projector: the command is executed without a reply
+                print("SENT")
+                print("{}: no reply (normal in standby/warm-up), check with pow=? "
+                      "in about 30-60 s".format(resp.command), file=sys.stderr)
             else:
                 print("{}: {} {}".format(resp.command, resp.status, resp.message).strip(),
                       file=sys.stderr)
