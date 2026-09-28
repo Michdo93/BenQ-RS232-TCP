@@ -1,0 +1,4 @@
+STABLE=Ready
+WARMUP=Warming up
+COOLDOWN=Cooling down
+NULL=-
