@@ -1,0 +1,41 @@
+// BenQ MH856UST - items (semantic model: Equipment "Projector" in location "SmartHomeLab")
+// Adjust the location group to your model, e.g. (gSmartHomeLab)
+
+Group   gBeamer                "BenQ Projector"                                   ["Projector"]
+
+// ---- Control
+Switch  Beamer_Power           "Power"                                  (gBeamer) ["Switch", "Power"]      { channel="mqtt:topic:beamerpi:mh856ust:power" }
+String  Beamer_Source          "Source [MAP(benq_source.map):%s]"       (gBeamer) ["Control"]              { channel="mqtt:topic:beamerpi:mh856ust:source",
+                                                                                                              stateDescription=""[options="HDMI=HDMI 1,HDMI2=HDMI 2,RGB=Computer 1,RGB2=Computer 2,VID=Video,SVID=S-Video"],
+                                                                                                              commandDescription=""[options="HDMI=HDMI 1,HDMI2=HDMI 2,RGB=Computer 1,RGB2=Computer 2,VID=Video,SVID=S-Video"] }
+Switch  Beamer_Mute            "Mute"                                   (gBeamer) ["Switch", "SoundVolume"] { channel="mqtt:topic:beamerpi:mh856ust:mute" }
+Number  Beamer_Volume          "Volume [%d]"                            (gBeamer) ["Control", "SoundVolume"] { channel="mqtt:topic:beamerpi:mh856ust:volume" }
+Switch  Beamer_Blank           "Blank"                                  (gBeamer) ["Switch"]               { channel="mqtt:topic:beamerpi:mh856ust:blank" }
+Switch  Beamer_Freeze          "Freeze"                                 (gBeamer) ["Switch"]               { channel="mqtt:topic:beamerpi:mh856ust:freeze" }
+String  Beamer_PictureMode     "Picture Mode [MAP(benq_picturemode.map):%s]" (gBeamer) ["Control"]         { channel="mqtt:topic:beamerpi:mh856ust:picturemode",
+                                                                                                              commandDescription=""[options="PRESET=Presentation,BRIGHT=Bright,SRGB=sRGB,CINE=Cinema,USER1=User 1,USER2=User 2"] }
+String  Beamer_LampMode        "Lamp Mode [MAP(benq_lampmode.map):%s]"  (gBeamer) ["Control"]              { channel="mqtt:topic:beamerpi:mh856ust:lampmode",
+                                                                                                              commandDescription=""[options="LNOR=Normal,ECO=Eco,SECO=SmartEco"] }
+String  Beamer_Aspect          "Aspect Ratio [%s]"                      (gBeamer) ["Control"]              { channel="mqtt:topic:beamerpi:mh856ust:aspect",
+                                                                                                              commandDescription=""[options="AUTO=Auto,4:3=4:3,16:9=16:9,16:10=16:10"] }
+String  Beamer_ColorTemp       "Color Temperature [%s]"                 (gBeamer) ["Control"]              { channel="mqtt:topic:beamerpi:mh856ust:colortemp",
+                                                                                                              commandDescription=""[options="WARM=Warm,NORMAL=Normal,COOL=Cool,NATIVE=Native"] }
+Number  Beamer_Brightness      "Brightness [%d]"                        (gBeamer) ["Control"]              { channel="mqtt:topic:beamerpi:mh856ust:brightness" }
+Number  Beamer_Contrast        "Contrast [%d]"                          (gBeamer) ["Control"]              { channel="mqtt:topic:beamerpi:mh856ust:contrast" }
+String  Beamer_Menu            "Menu"                                   (gBeamer) ["Control"]              { channel="mqtt:topic:beamerpi:mh856ust:menu",
+                                                                                                              commandDescription=""[options="ON=Menu,UP=Up,DOWN=Down,LEFT=Left,RIGHT=Right,ENTER=OK,OFF=Close"] }
+String  Beamer_Refresh         "Refresh"                                (gBeamer)                          { channel="mqtt:topic:beamerpi:mh856ust:refresh", autoupdate="false" }
+String  Beamer_Raw             "Raw Command"                            (gBeamer)                          { channel="mqtt:topic:beamerpi:mh856ust:raw", autoupdate="false" }
+
+// ---- Status
+Number  Beamer_LampHours       "Lamp Hours [%d h]"                      (gBeamer) ["Measurement", "Duration"] { channel="mqtt:topic:beamerpi:mh856ust:lamphours" }
+String  Beamer_Model           "Model [%s]"                             (gBeamer) ["Status"]               { channel="mqtt:topic:beamerpi:mh856ust:model" }
+String  Beamer_Phase           "Phase [MAP(benq_phase.map):%s]"         (gBeamer) ["Status"]               { channel="mqtt:topic:beamerpi:mh856ust:phase" }
+String  Beamer_Connection      "Connection [MAP(benq_connection.map):%s]" (gBeamer) ["Status"]             { channel="mqtt:topic:beamerpi:mh856ust:connection" }
+String  Beamer_RawResponse     "Raw Response [%s]"                      (gBeamer) ["Status"]               { channel="mqtt:topic:beamerpi:mh856ust:rawResponse" }
+String  Beamer_Error           "Last Error [%s]"                        (gBeamer) ["Status"]               { channel="mqtt:topic:beamerpi:mh856ust:error" }
+String  Beamer_ErrorCommand    "Last Error Command [%s]"                (gBeamer) ["Status"]               { channel="mqtt:topic:beamerpi:mh856ust:errorCommand" }
+
+// ---- Virtual items used by the rules (no channel)
+Switch  Beamer_Presentation    "Presentation Mode"                      (gBeamer) ["Switch"]
+Switch  Beamer_LampWarning     "Lamp Replacement Due"                   (gBeamer) ["Alarm"]
