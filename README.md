@@ -324,6 +324,7 @@ The program looks for its configuration in this order: `-c/--config`, `./benq_pr
 | `host` | `192.168.0.59` | IP address or hostname of the projector |
 | `port` | `8000` | TCP port of the RS232-over-LAN interface |
 | `timeout` | `3.0` | Seconds to wait for a reply |
+| `power_timeout` | `10.0` | Seconds to wait for a reply to `pow=on` / `pow=off` |
 | `command_gap` | `0.7` | Minimum pause between two commands in seconds |
 | `query_retries` | `1` | Extra attempts for `=?` queries without reply |
 | `warmup_time` | `60` | Seconds after power on in which commands are queued |
